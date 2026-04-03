@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Poppins, sans-serif;
+  background: #0a0f14;
+  color: white;
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 230px;
+  background: #111820;
+  padding: 20px 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #2b3240;
+}
+
+.sidebar h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 22px;
+  color: #4fdfff;
+}
+
+.sidebar button {
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.sidebar button:hover {
+  background: #1a242f;
+}
+
+.logout {
+  background: #ff4b4b !important;
+}
+.logout:hover { background: #d93636 !important; }
+
+/* Main */
+.main { flex: 1; padding: 30px; }
+
+button.filter-btn {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+#assignedBtn { background: #007bff; }
+#pendingBtn { background: #ffb703; color: #111; }
+#completedBtn { background: #2ecc71; color: #111; }
+#collectorBtn { background: #cc2e7d; color:white; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: #111820;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #22303d;
+}
+
+.assignBtn {
+  background: #007bff;
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.assignBtn:hover { background:#005ec4; }
+
+.smallBtn {
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  background:#2196F3;
+  color:white;
+}
+.smallBtn:hover { opacity:0.8; }
+
+.statusAssigned {
+  color:#00e676;
+  font-weight:700;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>⚙ Admin Panel</h2>
+  <button onclick="loadRequests('pending')">📦 Manage Requests</button>
+  <button class="logout" onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <h1>Welcome Admin 👋</h1>
+
+  <div>
+    <button id="assignedBtn" class="filter-btn">Assigned Requests</button>
+    <button id="pendingBtn" class="filter-btn">Pending Requests</button>
+    <button id="completedBtn" class="filter-btn">Completed Requests</button>
+    <button id="collectorBtn" class="filter-btn" onclick="loadSalaryPage()">💰 Collectors Salary</button>
+  </div>
+
+  <p style="color:#8ababf;margin-top:10px;">
+    View and manage requests or assign monthly salary to collectors here.
+  </p>
+
+  <table>
+    <thead>
+      <tr id="tableHead">
+        <th>ID</th>
+        <th>User Email</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>Assign Collector</th>
+      </tr>
+    </thead>
+    <tbody id="tablebody"></tbody>
+  </table>
+</div>
+
+<script>
+if (!localStorage.getItem("role") || localStorage.getItem("role") !== "admin") {
+  window.location.href = "login.html";
+}
+
+let currentView = "assigned";
+
+async function loadRequests(viewType="assigned") {
+  currentView = viewType;
+
+  document.getElementById("tableHead").innerHTML = `
+    <th>ID</th>
+    <th>User Email</th>
+    <th>Location</th>
+    <th>Status</th>
+    <th>Assign Collector</th>
+  `;
+
+  const res = await fetch("http://localhost:3000/api/admin/requests");
+  const data = await res.json();
+
+  const table = document.getElementById("tablebody");
+  table.innerHTML = "";
+
+  const filtered = data.filter(r => {
+    if (viewType==="pending") return r.status==="Pending";
+    if (viewType==="assigned") return r.status==="Assigned";
+    if (viewType==="completed") return r.status==="Collected";
+  });
+
+  filtered.forEach(r => {
+    table.innerHTML += `
+      <tr>
+        <td>${r.id}</td>
+        <td>${r.user_email}</td>
+        <td>${r.location}</td>
+        <td>${r.status}</td>
+        <td>
+          ${
+            r.status==="Collected"
+            ? "✅ Done"
+            : r.status==="Assigned"
+              ? "🟡 Assigned"
+              : `<button class='assignBtn' onclick="assign(${r.id})">Assign</button>`
+          }
+        </td>
+      </tr>
+    `;
+  });
+}
+
+async function assign(id) {
+  const collector = prompt("Enter Collector Email:");
+  if (!collector) return;
+
+  await fetch("http://localhost:3000/api/admin/assign", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ request_id:id, collector })
+  });
+
+  alert("Collector Assigned!");
+  loadRequests(currentView);
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+document.getElementById("pendingBtn").onclick = () => loadRequests("pending");
+document.getElementById("assignedBtn").onclick = () => loadRequests("assigned");
+document.getElementById("completedBtn").onclick = () => loadRequests("completed");
+
+loadRequests("assigned");
+</script>
+
+<!-- SALARY SCRIPT -->
+<script>
+async function loadSalaryPage() {
+  document.getElementById("tableHead").innerHTML = `
+    <th>Collector Name</th>
+    <th>Collector Email</th>
+    <th>Salary Status</th>
+    <th>Assign Salary</th>
+  `;
+
+  const r = await fetch("http://localhost:3000/api/collectors");
+  const collectors = await r.json();
+  const table = document.getElementById("tablebody");
+  table.innerHTML = "";
+
+  collectors.forEach(c => {
+    const safeId = encodeURIComponent(c.email);
+
+    table.innerHTML += `
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.email}</td>
+        <td id="salary-${safeId}">Not Assigned</td>
+        <td><button class="smallBtn" onclick="assignSalary('${c.email}')">Assign Salary</button></td>
+      </tr>
+    `;
+  });
+}
+
+function assignSalary(email) {
+  const amount = prompt("Enter Monthly Salary:");
+  if (!amount) return;
+
+  const month = prompt("Enter Salary Month (e.g., January 2025)");
+  if (!month) return;
+
+  fetch("http://localhost:3000/api/admin/salary", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ collector_email: email, amount, month })
+  })
+  .then(res => res.text())
+  .then(msg => {
+    alert(msg);
+
+    const safe = encodeURIComponent(email);
+    document.getElementById("salary-" + safe).innerHTML =
+      `Assigned for ${month} 💰`;
+    document.getElementById("salary-" + safe).className = "statusAssigned";
+
+    // ⭐ NEW PART – Send notification to collector
+    fetch("http://localhost:3000/api/admin/save-salary-msg", {
+      method:"POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({
+        email,
+        message: "Your salary for " + month + " has been credited."
+      })
+    });
+  });
+}
+
+</script>
+
+</body>
+</html>

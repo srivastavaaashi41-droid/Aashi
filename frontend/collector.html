@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Collector Dashboard</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Poppins, sans-serif;
+  background:#0a0f14;
+  color:white;
+  display:flex;
+}
+
+/* Sidebar */
+.sidebar{
+  width:230px;
+  background:#111820;
+  padding:20px 0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid #2b3240;
+}
+
+.sidebar h2{
+  text-align:center;
+  margin-bottom:35px;
+  font-size:22px;
+  color:#40a9ff;
+}
+
+.sidebar button{
+  padding:14px 20px;
+  background:none;
+  border:none;
+  text-align:left;
+  width:100%;
+  color:white;
+  font-size:15px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  transition:0.2s;
+}
+
+.sidebar button:hover{
+  background:#1a242f;
+}
+
+/* Main Content */
+.main{
+  flex:1;
+  padding:30px;
+}
+
+h1{
+  margin-top:0;
+  font-size:26px;
+  color:#40a9ff;
+}
+
+/* Salary Notification */
+#salaryMsg {
+  background:#00c853;
+  padding:12px;
+  border-radius:8px;
+  margin-bottom:15px;
+  text-align:center;
+  font-size:16px;
+  font-weight:600;
+  display:none;
+  animation:fadeIn 0.7s ease-in-out;
+}
+
+@keyframes fadeIn{
+  from{opacity:0; transform:translateY(-10px);}
+  to{opacity:1; transform:translateY(0);}
+}
+
+/* Summary Bar */
+.summary{
+  background:#111820;
+  padding:15px;
+  margin:20px 0;
+  border-radius:8px;
+  border:1px solid #22303d;
+  font-size:18px;
+  display:flex;
+  justify-content:space-between;
+}
+
+/* Table */
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:#111820;
+  margin-top:20px;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+th,td{
+  padding:12px;
+  text-align:center;
+  border-bottom:1px solid #22303d;
+}
+
+button.collect{
+  background:#40a9ff;
+  border:none;
+  padding:6px 14px;
+  border-radius:6px;
+  cursor:pointer;
+  color:black;
+  font-weight:600;
+}
+
+button.collect:hover{
+  background:#1e8bff;
+}
+
+.logout{
+  background:#ff4b4b !important;
+}
+.logout:hover{
+  background:#c93636 !important;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <h2>🧹 Collector</h2>
+
+  <button onclick="loadRequests()">📦 Assigned Requests</button>
+  <button class="logout" onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <h1>Welcome Collector 👋</h1>
+
+  <!-- Salary Message -->
+  <div id="salaryMsg"></div>
+
+  <div class="summary" id="summaryBox">
+    Loading summary...
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>User Email</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+</div>
+
+<script>
+const email = localStorage.getItem("user_email");
+if (!email) window.location.href = "login.html";
+
+// ----------------------
+//  SHOW SALARY MESSAGE
+// ----------------------
+async function checkSalaryMessage() {
+  const r = await fetch("http://localhost:3000/api/collector/notification/" + email);
+  const data = await r.json();
+
+  if (data.notification) {
+    const box = document.getElementById("salaryMsg");
+    box.style.display = "block";
+    box.textContent = "💰 " + data.notification;
+  }
+}
+
+
+// Load Assigned Requests
+async function loadRequests() {
+  const r = await fetch(`http://localhost:3000/api/collector/${email}`);
+  const data = await r.json();
+  const tb = document.getElementById("tbody");
+  tb.innerHTML = "";
+
+  data.forEach(row => {
+    tb.innerHTML += `
+      <tr>
+        <td>${row.id}</td>
+        <td>${row.user_email}</td>
+        <td>${row.location}</td>
+        <td>${row.status}</td>
+        <td>
+          ${row.status === "Collected" 
+            ? "✅ Done" 
+            : `<button class='collect' onclick="complete(${row.id})">Mark Collected</button>`}
+        </td>
+      </tr>`;
+  });
+
+  loadSummary(); 
+  checkSalaryMessage();
+}
+
+// Mark Request as Collected
+async function complete(id) {
+  await fetch("http://localhost:3000/api/collector/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id: id, collector_email: email })
+  });
+
+  alert("✅ Work Done! Request marked as Collected.");
+  loadRequests();
+  loadSummary();
+}
+
+// Load Collector Summary 
+async function loadSummary() {
+  const r = await fetch(`http://localhost:3000/api/collector/summary/${email}`);
+  const s = await r.json();
+  document.getElementById("summaryBox").innerHTML = `
+    ✅ Completed: ${s.collected} | 📦 Assigned: ${s.assigned} | ⏳ Pending: ${s.pending}
+  `;
+}
+
+// Logout 
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+// Load Page
+loadRequests();
+checkSalaryMessage();
+</script>
+
+</body>
+</html>

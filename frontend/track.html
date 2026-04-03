@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>User Dashboard - Smart Waste Pickup</title>
+
+<style>
+body{
+  margin:0;
+  font-family: Poppins, Arial;
+  background:#f2f9ff;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:40px;
+}
+
+.container{
+  background:white;
+  width:70%;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12);
+}
+
+h1{
+  text-align:center;
+  color:#1d6ed8;
+  margin-bottom:25px;
+  font-weight:600;
+}
+
+.section{
+  margin-top:25px;
+  padding:20px;
+  border-radius:10px;
+  border:1px solid #dfe7ee;
+  background:#ffffff;
+}
+
+.section h2{
+  margin-bottom:10px;
+  font-size:19px;
+  color:#333;
+  font-weight:500;
+}
+
+input{
+  width:60%;
+  padding:10px;
+  border-radius:6px;
+  border:1px solid #b7c6d1;
+  font-size:14px;
+}
+
+button{
+  padding:10px 16px;
+  border:none;
+  background:#1d6ed8;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+  margin-left:8px;
+  transition:0.2s;
+}
+
+button:hover{
+  background:#134c9e;
+}
+
+pre{
+  background:#f9fafc;
+  padding:15px;
+  border-radius:8px;
+  border:1px solid #e0e6eb;
+  margin-top:15px;
+  font-size:14px;
+  white-space:pre-wrap;
+}
+
+.logout{
+  float:right;
+  margin-top:-10px;
+  background:#ff4b4b;
+}
+.logout:hover{
+  background:#cc3737;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <button class="logout" onclick="logout()">Logout</button>
+
+  <h1>😎 Smart Waste Pickup Dashboard</h1>
+
+  <div class="section">
+    <h2>📌 Create Pickup Request</h2>
+    <input id="loc" placeholder="Enter your location (e.g., Unnao)">
+    <button id="createBtn">Request Pickup</button>
+    <p id="created" style="color:#1c9c58;font-weight:bold;"></p>
+  </div>
+
+  <div class="section">
+    <h2>🔍 Track a Request</h2>
+    <input id="tid" placeholder="Enter Request ID">
+    <button id="trackBtn">Track</button>
+    <pre id="out">No data yet</pre>
+  </div>
+
+</div>
+
+<script>
+const email = localStorage.getItem("user_email");
+if(!email) window.location.href="login.html";
+
+// Create request
+document.getElementById("createBtn").onclick = async ()=>{
+  const location = document.getElementById("loc").value.trim();
+  if(!location) return alert("Enter location");
+
+  const r = await fetch("http://localhost:3000/api/request", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ user_email: email, location })
+  });
+
+  const d = await r.json();
+  document.getElementById("created").textContent = "✅ Request Created! Your Request ID: " + d.request_id;
+  document.getElementById("tid").value = d.request_id;
+};
+
+// Track single request
+document.getElementById("trackBtn").onclick = async ()=>{
+  const id = document.getElementById("tid").value.trim();
+  if(!id) return alert("Enter Request ID");
+
+  const r = await fetch(`http://localhost:3000/api/track/${id}`);
+  const d = await r.json();
+  document.getElementById("out").textContent =
+`🆔 Request ID: ${d.id}
+📍 Location: ${d.location}
+👤 Collector: ${d.collector || 'Not Assigned Yet'}
+⏳ Status: ${d.status}`;
+};
+
+function logout(){
+  localStorage.clear();
+  window.location.href="login.html";
+}
+</script>
+
+</body>
+</html>

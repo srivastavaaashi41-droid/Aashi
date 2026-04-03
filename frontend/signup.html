@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Create Account - Smart Waste System</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Poppins, sans-serif;
+  background:#0a0f14;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+
+.card{
+  background:#111820;
+  padding:40px;
+  width:350px;
+  border-radius:12px;
+  text-align:center;
+  border:1px solid #2b3240;
+}
+
+h1{
+  color:#4fdfff;
+  margin-bottom:25px;
+  font-weight:600;
+}
+
+input, select{
+  width:100%;
+  padding:12px;
+  border-radius:6px;
+  border:none;
+  margin:10px 0;
+  background:#0d1217;
+  color:white;
+  border:1px solid #333;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  background:#4fdfff;
+  color:black;
+  font-weight:600;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:hover{
+  background:#38c3ff;
+}
+
+a{
+  margin-top:12px;
+  display:block;
+  color:#4fdfff;
+  text-decoration:none;
+  font-size:14px;
+}
+a:hover{
+  text-decoration:underline;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>Create Account</h1>
+
+  <input id="name" placeholder="Full Name">
+  <input id="email" placeholder="Email">
+  <input id="pass" type="password" placeholder="Password (min 5 chars)">
+
+  <select id="role">
+    <option value="user">User</option>
+    <option value="collector">Collector</option>
+    <option value="admin">Admin</option>
+  </select>
+
+  <button id="signupBtn">Sign Up</button>
+
+  <a href="login.html">Already have an account? Login</a>
+
+</div>
+
+<script>
+document.getElementById("signupBtn").onclick = async ()=>{
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("pass").value.trim();
+  const role = document.getElementById("role").value;
+
+  if(!name || !email || !password) return alert("Fill all fields");
+  if(password.length < 5) return alert("Password must be at least 5 characters");
+
+  const r = await fetch("http://localhost:3000/api/signup", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,email,password,role})
+  });
+
+  const msg = await r.text();
+  alert(msg);
+
+  if(r.status === 200) window.location.href = "login.html";
+};
+</script>
+
+</body>
+</html>
+
